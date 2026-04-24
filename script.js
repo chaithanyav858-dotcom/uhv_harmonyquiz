@@ -3,12 +3,12 @@
    ========================================================================== */
 // Replace these values with your actual Firebase config!
 const firebaseConfig = {
-  apiKey: "AIzaSyDGx65tCt54UVKus6ON7jVP8eCHbhr3P0E",
-  authDomain: "uhv-harmony-quiz.firebaseapp.com",
-  projectId: "uhv-harmony-quiz",
-  storageBucket: "uhv-harmony-quiz.firebasestorage.app",
-  messagingSenderId: "411795678988",
-  appId: "1:411795678988:web:5ec3c47559078e73ec0b29"
+    apiKey: "AIzaSyDGx65tCt54UVKus6ON7jVP8eCHbhr3P0E",
+    authDomain: "uhv-harmony-quiz.firebaseapp.com",
+    projectId: "uhv-harmony-quiz",
+    storageBucket: "uhv-harmony-quiz.firebasestorage.app",
+    messagingSenderId: "411795678988",
+    appId: "1:411795678988:web:5ec3c47559078e73ec0b29"
 };
 
 // Initialize Firebase
@@ -28,7 +28,7 @@ let currentUser = {
 
 let currentQuestionIndex = 0;
 let timerInterval;
-let timeLeft = 10;
+let timeLeft = 30;
 let questionStartTime = 0;
 
 // Quiz Database: 15 Questions based on Universal Human Values (Society & Nature)
@@ -219,17 +219,17 @@ function showScreen(screenName) {
 // Start Game
 regForm.addEventListener('submit', (e) => {
     e.preventDefault();
-    
+
     // Capture user details
     currentUser.name = document.getElementById('student-name').value.trim();
     currentUser.usn = document.getElementById('student-usn').value.trim();
     currentUser.section = document.getElementById('student-section').value.trim();
     currentUser.score = 0;
     currentUser.timeTaken = 0;
-    
+
     // Reset quiz variables
     currentQuestionIndex = 0;
-    
+
     showScreen('quiz');
     loadQuestion();
 });
@@ -237,47 +237,47 @@ regForm.addEventListener('submit', (e) => {
 // Load Question
 function loadQuestion() {
     const q = questions[currentQuestionIndex];
-    
+
     // Update Header
     questionTracker.innerText = `Question ${currentQuestionIndex + 1}/${questions.length}`;
     progressFill.style.width = `${((currentQuestionIndex) / questions.length) * 100}%`;
-    
+
     // Set text
     questionText.innerText = q.question;
     optionsContainer.innerHTML = '';
-    
+
     // Shuffle options so positive isn't always in the same spot
     const shuffledOptions = [...q.options].sort(() => Math.random() - 0.5);
-    
+
     shuffledOptions.forEach((option) => {
         const btn = document.createElement('button');
         btn.classList.add('option-btn');
         btn.innerText = option.text;
-        
+
         btn.addEventListener('click', () => handleAnswer(option, btn, shuffledOptions));
-        
+
         optionsContainer.appendChild(btn);
     });
-    
+
     startTimer();
 }
 
 // Timer Logic
 function startTimer() {
-    timeLeft = 10;
+    timeLeft = 30;
     timeLeftEl.innerText = timeLeft;
     timerCircle.classList.remove('warning');
     questionStartTime = Date.now();
-    
+
     clearInterval(timerInterval);
     timerInterval = setInterval(() => {
         timeLeft--;
         timeLeftEl.innerText = timeLeft;
-        
-        if (timeLeft <= 3) {
+
+        if (timeLeft <= 5) {
             timerCircle.classList.add('warning');
         }
-        
+
         if (timeLeft <= 0) {
             clearInterval(timerInterval);
             handleTimeOut();
@@ -292,23 +292,23 @@ function stopTimer() {
 // Handle Answer
 function handleAnswer(selectedOption, btnElement, allOptions) {
     stopTimer();
-    
+
     const timeToAnswer = (Date.now() - questionStartTime) / 1000;
     currentUser.timeTaken += timeToAnswer;
-    
+
     // Disable all buttons
     const allBtns = optionsContainer.querySelectorAll('.option-btn');
     allBtns.forEach(b => b.style.pointerEvents = 'none');
-    
+
     // Style selected button
     btnElement.classList.add('selected');
-    
+
     // Calculate Score
     let pointsEarned = 0;
-    
+
     if (selectedOption.type === 'positive') {
         btnElement.classList.add('correct');
-        if (timeLeft >= 5) {
+        if (timeLeft >= 15) {
             pointsEarned = 10; // Fast + Correct
         } else {
             pointsEarned = 6;  // Slow + Correct
@@ -317,8 +317,8 @@ function handleAnswer(selectedOption, btnElement, allOptions) {
         pointsEarned = 3;
     } else if (selectedOption.type === 'negative') {
         btnElement.classList.add('wrong');
-        pointsEarned = 0; 
-        
+        pointsEarned = 0;
+
         // Highlight the correct one
         allBtns.forEach(b => {
             const optData = allOptions.find(o => o.text === b.innerText);
@@ -327,9 +327,9 @@ function handleAnswer(selectedOption, btnElement, allOptions) {
             }
         });
     }
-    
+
     currentUser.score += pointsEarned;
-    
+
     // Show Feedback after a tiny delay
     setTimeout(() => {
         showFeedback(selectedOption, pointsEarned);
@@ -339,7 +339,7 @@ function handleAnswer(selectedOption, btnElement, allOptions) {
 function handleTimeOut() {
     const allBtns = optionsContainer.querySelectorAll('.option-btn');
     allBtns.forEach(b => b.style.pointerEvents = 'none');
-    
+
     showFeedback({
         type: 'negative',
         feedback: "Time's up! Quick decision-making is often required in life."
@@ -349,10 +349,10 @@ function handleTimeOut() {
 // Feedback Overlay
 function showFeedback(option, pointsEarned) {
     feedbackExplanation.innerText = option.feedback;
-    
+
     // Reset classes
     scoreUpdateEl.className = 'score-update';
-    
+
     if (option.type === 'positive') {
         feedbackIcon.innerText = '🌟';
         feedbackTitle.innerText = pointsEarned === 10 ? 'Brilliant & Fast!' : 'Great Choice!';
@@ -369,16 +369,16 @@ function showFeedback(option, pointsEarned) {
         scoreUpdateEl.innerText = `+${pointsEarned} Points`;
         scoreUpdateEl.classList.add('negative');
     }
-    
+
     feedbackOverlay.classList.remove('hidden');
 }
 
 // Next Question
 btnNextQuestion.addEventListener('click', () => {
     feedbackOverlay.classList.add('hidden');
-    
+
     currentQuestionIndex++;
-    
+
     if (currentQuestionIndex < questions.length) {
         loadQuestion();
     } else {
@@ -392,14 +392,14 @@ btnNextQuestion.addEventListener('click', () => {
 async function endQuiz() {
     // Fill the progress bar completely
     progressFill.style.width = '100%';
-    
+
     // Calculate max possible score (15 * 10 = 150)
     const maxScore = questions.length * 10;
     const percentage = (currentUser.score / maxScore) * 100;
-    
+
     // UI Updates
     finalScoreEl.innerText = currentUser.score;
-    
+
     // Performance logic
     performanceBadge.className = 'performance-badge';
     if (percentage >= 80) {
@@ -418,12 +418,12 @@ async function endQuiz() {
         resultMessage.innerText = "Take some time to reflect on relationships, society, and nature. Harmony is a journey.";
         resultIcon.innerText = '🌱';
     }
-    
+
     showScreen('result');
 
     // Attempt to save to Firebase
     try {
-        if(firebaseConfig.apiKey !== "YOUR_API_KEY") {
+        if (firebaseConfig.apiKey !== "YOUR_API_KEY") {
             await db.collection("leaderboard").add({
                 name: currentUser.name,
                 usn: currentUser.usn,
@@ -445,8 +445,13 @@ async function endQuiz() {
    Admin & Leaderboard Features (FIREBASE)
    ========================================================================== */
 btnShowAdmin.addEventListener('click', () => {
-    loadAdminData();
-    showScreen('admin');
+    const password = prompt("Please enter the admin password:");
+    if (password === "Anya@2006") {
+        loadAdminData();
+        showScreen('admin');
+    } else if (password !== null) {
+        alert("Incorrect password!");
+    }
 });
 
 btnCloseAdmin.addEventListener('click', () => {
@@ -454,8 +459,13 @@ btnCloseAdmin.addEventListener('click', () => {
 });
 
 btnViewLeaderboard.addEventListener('click', () => {
-    loadAdminData();
-    showScreen('admin');
+    const password = prompt("Please enter the admin password:");
+    if (password === "Anya@2006") {
+        loadAdminData();
+        showScreen('admin');
+    } else if (password !== null) {
+        alert("Incorrect password!");
+    }
 });
 
 btnRestart.addEventListener('click', () => {
@@ -469,8 +479,8 @@ async function loadAdminData() {
     totalParticipantsEl.innerText = '...';
     highestScoreEl.innerText = '...';
     leaderboardBody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Loading...</td></tr>';
-    
-    if(firebaseConfig.apiKey === "YOUR_API_KEY") {
+
+    if (firebaseConfig.apiKey === "YOUR_API_KEY") {
         leaderboardBody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:red;">Firebase is not configured! Please add your API keys in script.js</td></tr>';
         return;
     }
@@ -478,45 +488,44 @@ async function loadAdminData() {
     try {
         const querySnapshot = await db.collection("leaderboard")
             .orderBy("score", "desc")
-            .orderBy("timeTaken", "asc")
             .get();
         const leaderboard = [];
         querySnapshot.forEach((doc) => {
             leaderboard.push({ id: doc.id, ...doc.data() });
         });
-        
+
         // Stats
         totalParticipantsEl.innerText = leaderboard.length;
-        
+
         if (leaderboard.length > 0) {
             highestScoreEl.innerText = leaderboard[0].score;
         } else {
             highestScoreEl.innerText = '0';
         }
-        
+
         // Populate Table
         leaderboardBody.innerHTML = '';
-        
-        if(leaderboard.length === 0) {
+
+        if (leaderboard.length === 0) {
             leaderboardBody.innerHTML = '<tr><td colspan="4" style="text-align:center;">No participants yet.</td></tr>';
         }
 
         leaderboard.forEach((entry, index) => {
             const tr = document.createElement('tr');
-            
+
             // Rank styling
             let rankHtml = `${index + 1}`;
             if (index === 0) rankHtml = `<span class="rank-badge rank-1">1</span>`;
             else if (index === 1) rankHtml = `<span class="rank-badge rank-2">2</span>`;
             else if (index === 2) rankHtml = `<span class="rank-badge rank-3">3</span>`;
-            
+
             tr.innerHTML = `
                 <td>${rankHtml}</td>
                 <td><strong>${entry.name}</strong><br><small style="color:#6b7280">${entry.section}</small></td>
                 <td>${entry.usn}</td>
                 <td><strong style="color:var(--primary-color)">${entry.score}</strong></td>
             `;
-            
+
             leaderboardBody.appendChild(tr);
         });
     } catch (e) {
@@ -530,11 +539,11 @@ btnClearData.addEventListener('click', async () => {
         try {
             const querySnapshot = await db.collection("leaderboard").get();
             const deletePromises = [];
-            
+
             querySnapshot.forEach((docSnap) => {
                 deletePromises.push(db.collection("leaderboard").doc(docSnap.id).delete());
             });
-            
+
             await Promise.all(deletePromises);
             console.log("All data cleared.");
             loadAdminData(); // refresh table
