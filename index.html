@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Harmony Quiz Game</title>
     <!-- Google Fonts for modern typography -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Outfit:wght@500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@500;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -24,6 +24,16 @@
                 <h1 class="title">Harmony Quest</h1>
                 <p class="subtitle">Explore Universal Human Values in Society & Nature</p>
                 
+                <!-- Winner Announcement Panel -->
+                <div id="public-winner-panel" class="winner-panel hidden">
+                    <div class="winner-icon">🏆</div>
+                    <div class="winner-details">
+                        <h4>Latest Winner</h4>
+                        <p id="winner-name-display" class="winner-name">...</p>
+                        <p id="winner-score-display" class="winner-score">...</p>
+                    </div>
+                </div>
+
                 <form id="registration-form" class="form-container">
                     <div class="input-group">
                         <label for="student-name">Full Name</label>
@@ -44,8 +54,9 @@
                     <button type="submit" class="btn primary-btn pulse">Start Journey</button>
                 </form>
                 
-                <div class="admin-link-container">
-                    <button id="btn-show-admin" class="btn-text">Admin Dashboard</button>
+                <div class="admin-link-container" style="display: flex; justify-content: center; gap: 1rem; margin-top: 1.5rem;">
+                    <button id="btn-show-public-leaderboard" class="btn-text" style="margin-top: 0;">Public Leaderboard</button>
+                    <button id="btn-show-admin" class="btn-text" style="margin-top: 0;">Admin Dashboard</button>
                 </div>
             </div>
         </section>
@@ -63,7 +74,7 @@
                 </div>
                 <div class="timer-container">
                     <div class="timer-circle">
-                        <span id="time-left">10</span>
+                        <span id="time-left">30</span>
                     </div>
                 </div>
             </div>
@@ -111,6 +122,14 @@
                     You have shown an excellent understanding of universal human values!
                 </p>
 
+                <!-- Review Answers Section -->
+                <div class="review-answers-container" style="margin: 2rem 0; text-align: left;">
+                    <h3 style="margin-bottom: 1rem; text-align: center;">Review Answers</h3>
+                    <div id="review-list" class="review-list">
+                        <!-- Review items injected by JS -->
+                    </div>
+                </div>
+
                 <div class="result-actions">
                     <button id="btn-view-leaderboard" class="btn secondary-btn">View Leaderboard</button>
                     <button id="btn-restart" class="btn primary-btn">Play Again</button>
@@ -119,12 +138,40 @@
         </section>
 
         <!-- ============================================== -->
-        <!-- SCREEN 4: ADMIN DASHBOARD                      -->
+        <!-- SCREEN 4: PUBLIC LEADERBOARD                   -->
         <!-- ============================================== -->
-        <section id="admin-screen" class="screen hidden">
+        <section id="public-leaderboard-screen" class="screen hidden">
             <div class="card glass-card admin-card">
                 <div class="admin-header">
-                    <h2 class="title">Leaderboard</h2>
+                    <h2 class="title">Public Leaderboard</h2>
+                    <button id="btn-close-public" class="btn-icon">✖</button>
+                </div>
+                
+                <div class="table-container">
+                    <table class="leaderboard-table">
+                        <thead>
+                            <tr>
+                                <th>Rank</th>
+                                <th>Name</th>
+                                <th>Score</th>
+                                <th>Total Time</th>
+                            </tr>
+                        </thead>
+                        <tbody id="public-leaderboard-body">
+                            <!-- Leaderboard rows injected by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================== -->
+        <!-- SCREEN 5: ADMIN DASHBOARD                      -->
+        <!-- ============================================== -->
+        <section id="admin-screen" class="screen hidden">
+            <div class="card glass-card admin-card" style="max-width: 900px;">
+                <div class="admin-header">
+                    <h2 class="title">Admin Dashboard</h2>
                     <button id="btn-close-admin" class="btn-icon">✖</button>
                 </div>
                 
@@ -138,6 +185,10 @@
                         <span class="stat-value" id="highest-score">0</span>
                     </div>
                 </div>
+
+                <div class="admin-controls" style="margin-bottom: 1rem; text-align: right;">
+                    <button id="btn-announce-winner" class="btn primary-btn" style="width: auto; padding: 0.5rem 1rem; margin-top: 0; font-size: 0.9rem;">📢 Announce Winner</button>
+                </div>
                 
                 <div class="table-container">
                     <table class="leaderboard-table">
@@ -147,6 +198,8 @@
                                 <th>Name</th>
                                 <th>USN</th>
                                 <th>Score</th>
+                                <th>Total Time</th>
+                                <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody id="leaderboard-body">
@@ -160,6 +213,22 @@
                 </div>
             </div>
         </section>
+
+        <!-- ============================================== -->
+        <!-- ADMIN ANSWER BREAKDOWN MODAL                   -->
+        <!-- ============================================== -->
+        <div id="breakdown-overlay" class="overlay hidden">
+            <div class="feedback-card" style="max-width: 600px; max-height: 80vh; overflow-y: auto; text-align: left;">
+                <h2 style="color: white; margin-bottom: 1rem;">Answer Breakdown</h2>
+                <h4 id="breakdown-name" style="color: var(--primary-color); margin-bottom: 1.5rem;">Name</h4>
+                <div id="breakdown-list" class="review-list">
+                    <!-- Breakdown items injected by JS -->
+                </div>
+                <div style="text-align: center;">
+                    <button id="btn-close-breakdown" class="btn secondary-btn" style="width: auto; margin-top: 2rem;">Close</button>
+                </div>
+            </div>
+        </div>
 
     </main>
 

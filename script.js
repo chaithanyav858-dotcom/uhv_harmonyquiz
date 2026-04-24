@@ -23,13 +23,15 @@ let currentUser = {
     usn: '',
     section: '',
     score: 0,
-    timeTaken: 0
+    timeTaken: 0,
+    answers: []
 };
 
 let currentQuestionIndex = 0;
 let timerInterval;
 let timeLeft = 30;
 let questionStartTime = 0;
+let adminUnsubscribe = null;
 
 // Quiz Database: 15 Questions based on Universal Human Values (Society & Nature)
 const questions = [
@@ -162,17 +164,21 @@ const screens = {
     welcome: document.getElementById('welcome-screen'),
     quiz: document.getElementById('quiz-screen'),
     result: document.getElementById('result-screen'),
-    admin: document.getElementById('admin-screen')
+    admin: document.getElementById('admin-screen'),
+    publicLeaderboard: document.getElementById('public-leaderboard-screen')
 };
 
 // Form & Buttons
 const regForm = document.getElementById('registration-form');
 const btnShowAdmin = document.getElementById('btn-show-admin');
 const btnCloseAdmin = document.getElementById('btn-close-admin');
+const btnShowPublicLeaderboard = document.getElementById('btn-show-public-leaderboard');
+const btnClosePublic = document.getElementById('btn-close-public');
 const btnNextQuestion = document.getElementById('btn-next-question');
 const btnViewLeaderboard = document.getElementById('btn-view-leaderboard');
 const btnRestart = document.getElementById('btn-restart');
 const btnClearData = document.getElementById('btn-clear-data');
+const btnAnnounceWinner = document.getElementById('btn-announce-winner');
 
 // Quiz UI
 const questionTracker = document.getElementById('question-tracker');
@@ -182,12 +188,13 @@ const timerCircle = document.querySelector('.timer-circle');
 const questionText = document.getElementById('question-text');
 const optionsContainer = document.getElementById('options-container');
 
-// Feedback UI
+// Feedback & Review UI
 const feedbackOverlay = document.getElementById('feedback-overlay');
 const feedbackIcon = document.getElementById('feedback-icon');
 const feedbackTitle = document.getElementById('feedback-title');
 const feedbackExplanation = document.getElementById('feedback-explanation');
 const scoreUpdateEl = document.getElementById('score-update');
+const reviewList = document.getElementById('review-list');
 
 // Result UI
 const finalScoreEl = document.getElementById('final-score');
@@ -195,15 +202,31 @@ const performanceBadge = document.getElementById('performance-badge');
 const resultMessage = document.getElementById('result-message');
 const resultIcon = document.getElementById('result-icon');
 
-// Admin UI
+// Leaderboards UI
 const totalParticipantsEl = document.getElementById('total-participants');
 const highestScoreEl = document.getElementById('highest-score');
 const leaderboardBody = document.getElementById('leaderboard-body');
+const publicLeaderboardBody = document.getElementById('public-leaderboard-body');
+
+// Winner UI
+const publicWinnerPanel = document.getElementById('public-winner-panel');
+const winnerNameDisplay = document.getElementById('winner-name-display');
+const winnerScoreDisplay = document.getElementById('winner-score-display');
+
+// Admin Breakdown UI
+const breakdownOverlay = document.getElementById('breakdown-overlay');
+const breakdownName = document.getElementById('breakdown-name');
+const breakdownList = document.getElementById('breakdown-list');
+const btnCloseBreakdown = document.getElementById('btn-close-breakdown');
 
 
 /* ==========================================================================
-   Navigation Functions
+   Initialization
    ========================================================================== */
+window.onload = () => {
+    listenForWinner();
+};
+
 function showScreen(screenName) {
     Object.values(screens).forEach(screen => {
         screen.classList.remove('active');
@@ -214,70 +237,66 @@ function showScreen(screenName) {
 }
 
 /* ==========================================================================
-   Initialization & Game Logic
+   Quiz Logic
    ========================================================================== */
-// Start Game
 regForm.addEventListener('submit', (e) => {
     e.preventDefault();
-
+    
     // Capture user details
     currentUser.name = document.getElementById('student-name').value.trim();
     currentUser.usn = document.getElementById('student-usn').value.trim();
     currentUser.section = document.getElementById('student-section').value.trim();
     currentUser.score = 0;
     currentUser.timeTaken = 0;
-
-    // Reset quiz variables
+    currentUser.answers = [];
+    
     currentQuestionIndex = 0;
-
+    
     showScreen('quiz');
     loadQuestion();
 });
 
-// Load Question
 function loadQuestion() {
     const q = questions[currentQuestionIndex];
-
+    
     // Update Header
     questionTracker.innerText = `Question ${currentQuestionIndex + 1}/${questions.length}`;
     progressFill.style.width = `${((currentQuestionIndex) / questions.length) * 100}%`;
-
+    
     // Set text
     questionText.innerText = q.question;
     optionsContainer.innerHTML = '';
-
-    // Shuffle options so positive isn't always in the same spot
+    
     const shuffledOptions = [...q.options].sort(() => Math.random() - 0.5);
-
+    
     shuffledOptions.forEach((option) => {
         const btn = document.createElement('button');
         btn.classList.add('option-btn');
         btn.innerText = option.text;
-
+        
         btn.addEventListener('click', () => handleAnswer(option, btn, shuffledOptions));
-
+        
         optionsContainer.appendChild(btn);
     });
-
+    
     startTimer();
 }
 
-// Timer Logic
 function startTimer() {
     timeLeft = 30;
     timeLeftEl.innerText = timeLeft;
     timerCircle.classList.remove('warning');
     questionStartTime = Date.now();
-
+    
     clearInterval(timerInterval);
     timerInterval = setInterval(() => {
         timeLeft--;
         timeLeftEl.innerText = timeLeft;
-
+        
         if (timeLeft <= 5) {
             timerCircle.classList.add('warning');
         }
-
+        
         if (timeLeft <= 0) {
             clearInterval(timerInterval);
             handleTimeOut();
@@ -289,37 +308,38 @@ function stopTimer() {
     clearInterval(timerInterval);
 }
 
-// Handle Answer
 function handleAnswer(selectedOption, btnElement, allOptions) {
     stopTimer();
-
+    
     const timeToAnswer = (Date.now() - questionStartTime) / 1000;
     currentUser.timeTaken += timeToAnswer;
-
-    // Disable all buttons
+    
     const allBtns = optionsContainer.querySelectorAll('.option-btn');
     allBtns.forEach(b => b.style.pointerEvents = 'none');
-
-    // Style selected button
+    
     btnElement.classList.add('selected');
-
-    // Calculate Score
+    
     let pointsEarned = 0;
-
+    let isCorrect = false;
+    const correctOption = allOptions.find(o => o.type === 'positive');
+    
     if (selectedOption.type === 'positive') {
         btnElement.classList.add('correct');
-        if (timeLeft >= 15) {
-            pointsEarned = 10; // Fast + Correct
+        isCorrect = true;
+        // 30s Scoring Tiers
+        if (timeLeft >= 20) {
+            pointsEarned = 10; // 0-10 sec
+        } else if (timeLeft >= 10) {
+            pointsEarned = 7;  // 11-20 sec
         } else {
-            pointsEarned = 6;  // Slow + Correct
+            pointsEarned = 5;  // 21-30 sec
         }
     } else if (selectedOption.type === 'neutral') {
         pointsEarned = 3;
     } else if (selectedOption.type === 'negative') {
         btnElement.classList.add('wrong');
-        pointsEarned = 0;
-
-        // Highlight the correct one
+        pointsEarned = 0; 
+        
         allBtns.forEach(b => {
             const optData = allOptions.find(o => o.text === b.innerText);
             if (optData && optData.type === 'positive') {
@@ -327,10 +347,18 @@ function handleAnswer(selectedOption, btnElement, allOptions) {
             }
         });
     }
+    
+    // Store answer breakdown
+    currentUser.answers.push({
+        question: questions[currentQuestionIndex].question,
+        selected: selectedOption.text,
+        correct: correctOption.text,
+        isCorrect: isCorrect,
+        timeTaken: Number(timeToAnswer.toFixed(1))
+    });
 
     currentUser.score += pointsEarned;
-
-    // Show Feedback after a tiny delay
+    
     setTimeout(() => {
         showFeedback(selectedOption, pointsEarned);
     }, 800);
@@ -339,6 +367,17 @@ function handleAnswer(selectedOption, btnElement, allOptions) {
 function handleTimeOut() {
     const allBtns = optionsContainer.querySelectorAll('.option-btn');
     allBtns.forEach(b => b.style.pointerEvents = 'none');
+    
+    const correctOption = questions[currentQuestionIndex].options.find(o => o.type === 'positive');
+    
+    currentUser.timeTaken += 30;
+    currentUser.answers.push({
+        question: questions[currentQuestionIndex].question,
+        selected: "No Answer (Time Out)",
+        correct: correctOption.text,
+        isCorrect: false,
+        timeTaken: 30
+    });
 
     showFeedback({
         type: 'negative',
@@ -346,13 +385,10 @@ function handleTimeOut() {
     }, 0);
 }
 
-// Feedback Overlay
 function showFeedback(option, pointsEarned) {
     feedbackExplanation.innerText = option.feedback;
-
-    // Reset classes
     scoreUpdateEl.className = 'score-update';
-
+    
     if (option.type === 'positive') {
         feedbackIcon.innerText = '🌟';
         feedbackTitle.innerText = pointsEarned === 10 ? 'Brilliant & Fast!' : 'Great Choice!';
@@ -369,16 +405,13 @@ function showFeedback(option, pointsEarned) {
         scoreUpdateEl.innerText = `+${pointsEarned} Points`;
         scoreUpdateEl.classList.add('negative');
     }
-
+    
     feedbackOverlay.classList.remove('hidden');
 }
 
-// Next Question
 btnNextQuestion.addEventListener('click', () => {
     feedbackOverlay.classList.add('hidden');
-
     currentQuestionIndex++;
-
     if (currentQuestionIndex < questions.length) {
         loadQuestion();
     } else {
@@ -387,20 +420,14 @@ btnNextQuestion.addEventListener('click', () => {
 });
 
 /* ==========================================================================
-   Results & Data Storage (FIREBASE)
+   Results & Firebase Storage
    ========================================================================== */
 async function endQuiz() {
-    // Fill the progress bar completely
     progressFill.style.width = '100%';
-
-    // Calculate max possible score (15 * 10 = 150)
     const maxScore = questions.length * 10;
     const percentage = (currentUser.score / maxScore) * 100;
-
-    // UI Updates
+    
     finalScoreEl.innerText = currentUser.score;
-
-    // Performance logic
     performanceBadge.className = 'performance-badge';
     if (percentage >= 80) {
         performanceBadge.innerText = 'Harmony Leader';
@@ -418,36 +445,155 @@ async function endQuiz() {
         resultMessage.innerText = "Take some time to reflect on relationships, society, and nature. Harmony is a journey.";
         resultIcon.innerText = '🌱';
     }
-
+    
+    renderReviewAnswers(currentUser.answers, reviewList);
     showScreen('result');
 
-    // Attempt to save to Firebase
     try {
-        if (firebaseConfig.apiKey !== "YOUR_API_KEY") {
+        if(firebaseConfig.apiKey !== "YOUR_API_KEY") {
             await db.collection("leaderboard").add({
                 name: currentUser.name,
                 usn: currentUser.usn,
                 section: currentUser.section,
                 score: currentUser.score,
                 timeTaken: Number(currentUser.timeTaken.toFixed(1)),
+                answers: currentUser.answers,
                 timestamp: new Date().toISOString()
             });
             console.log("Score saved to Firebase!");
-        } else {
-            console.warn("Firebase not configured. Setup your API keys to save data.");
         }
     } catch (e) {
         console.error("Error adding document to Firebase: ", e);
     }
 }
 
+function renderReviewAnswers(answersArray, containerElement) {
+    containerElement.innerHTML = '';
+    answersArray.forEach((ans, index) => {
+        const item = document.createElement('div');
+        item.classList.add('review-item');
+        item.classList.add(ans.isCorrect ? 'is-correct' : 'is-wrong');
+        
+        item.innerHTML = `
+            <div class="review-question">${index + 1}. ${ans.question}</div>
+            <div class="review-answer"><strong>You selected:</strong> ${ans.selected} (${ans.timeTaken}s)</div>
+            ${!ans.isCorrect ? `<div class="review-correct"><strong>Correct:</strong> ${ans.correct}</div>` : ''}
+        `;
+        containerElement.appendChild(item);
+    });
+}
+
+btnRestart.addEventListener('click', () => {
+    regForm.reset();
+    showScreen('welcome');
+});
+
 /* ==========================================================================
-   Admin & Leaderboard Features (FIREBASE)
+   Public Leaderboard
+   ========================================================================== */
+btnShowPublicLeaderboard.addEventListener('click', () => {
+    loadPublicLeaderboard();
+    showScreen('publicLeaderboard');
+});
+
+btnClosePublic.addEventListener('click', () => {
+    showScreen('welcome');
+});
+
+btnViewLeaderboard.addEventListener('click', () => {
+    loadPublicLeaderboard();
+    showScreen('publicLeaderboard');
+});
+
+async function loadPublicLeaderboard() {
+    publicLeaderboardBody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Loading...</td></tr>';
+    try {
+        const querySnapshot = await db.collection("leaderboard").orderBy("score", "desc").get();
+        const leaderboard = [];
+        querySnapshot.forEach((doc) => {
+            leaderboard.push(doc.data());
+        });
+        
+        // JS Secondary Sort (Time Ascending)
+        leaderboard.sort((a, b) => b.score - a.score || a.timeTaken - b.timeTaken);
+        
+        publicLeaderboardBody.innerHTML = '';
+        if(leaderboard.length === 0) {
+            publicLeaderboardBody.innerHTML = '<tr><td colspan="4" style="text-align:center;">No participants yet.</td></tr>';
+        }
+
+        leaderboard.forEach((entry, index) => {
+            const tr = document.createElement('tr');
+            let rankHtml = `${index + 1}`;
+            if (index === 0) rankHtml = `<span class="rank-badge rank-1">1</span>`;
+            else if (index === 1) rankHtml = `<span class="rank-badge rank-2">2</span>`;
+            else if (index === 2) rankHtml = `<span class="rank-badge rank-3">3</span>`;
+            
+            tr.innerHTML = `
+                <td>${rankHtml}</td>
+                <td><strong>${entry.name}</strong></td>
+                <td><strong style="color:var(--primary-color)">${entry.score}</strong></td>
+                <td>${entry.timeTaken}s</td>
+            `;
+            publicLeaderboardBody.appendChild(tr);
+        });
+    } catch (e) {
+        publicLeaderboardBody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:red;">Error loading data.</td></tr>';
+    }
+}
+
+/* ==========================================================================
+   Winner Announcement System
+   ========================================================================== */
+function listenForWinner() {
+    db.collection("announcement").orderBy("timestamp", "desc").limit(1)
+      .onSnapshot((snapshot) => {
+          if (!snapshot.empty) {
+              const winner = snapshot.docs[0].data();
+              winnerNameDisplay.innerText = winner.name;
+              winnerScoreDisplay.innerText = `${winner.score} Points (${winner.timeTaken}s)`;
+              publicWinnerPanel.classList.remove('hidden');
+          } else {
+              publicWinnerPanel.classList.add('hidden');
+          }
+      }, (error) => {
+          console.error("Could not listen for winner", error);
+      });
+}
+
+btnAnnounceWinner.addEventListener('click', async () => {
+    try {
+        // Get the top user
+        const snapshot = await db.collection("leaderboard").orderBy("score", "desc").get();
+        const leaderboard = [];
+        snapshot.forEach((doc) => leaderboard.push(doc.data()));
+        leaderboard.sort((a, b) => b.score - a.score || a.timeTaken - b.timeTaken);
+
+        if (leaderboard.length > 0) {
+            const winner = leaderboard[0];
+            await db.collection("announcement").add({
+                name: winner.name,
+                score: winner.score,
+                timeTaken: winner.timeTaken,
+                timestamp: new Date().toISOString()
+            });
+            alert(`Winner announced successfully: ${winner.name}!`);
+        } else {
+            alert("No participants to announce.");
+        }
+    } catch (e) {
+        alert("Error announcing winner.");
+        console.error(e);
+    }
+});
+
+/* ==========================================================================
+   Admin Dashboard (REALTIME & SECURE)
    ========================================================================== */
 btnShowAdmin.addEventListener('click', () => {
     const password = prompt("Please enter the admin password:");
     if (password === "Anya@2006") {
-        loadAdminData();
+        setupAdminListener();
         showScreen('admin');
     } else if (password !== null) {
         alert("Incorrect password!");
@@ -455,83 +601,82 @@ btnShowAdmin.addEventListener('click', () => {
 });
 
 btnCloseAdmin.addEventListener('click', () => {
-    showScreen('welcome');
-});
-
-btnViewLeaderboard.addEventListener('click', () => {
-    const password = prompt("Please enter the admin password:");
-    if (password === "Anya@2006") {
-        loadAdminData();
-        showScreen('admin');
-    } else if (password !== null) {
-        alert("Incorrect password!");
+    if (adminUnsubscribe) {
+        adminUnsubscribe(); // Stop listening when admin closes
     }
-});
-
-btnRestart.addEventListener('click', () => {
-    // Reset form
-    regForm.reset();
     showScreen('welcome');
 });
 
-async function loadAdminData() {
-    // Show loading state
+btnCloseBreakdown.addEventListener('click', () => {
+    breakdownOverlay.classList.add('hidden');
+});
+
+function setupAdminListener() {
     totalParticipantsEl.innerText = '...';
     highestScoreEl.innerText = '...';
-    leaderboardBody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Loading...</td></tr>';
+    leaderboardBody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Loading Live Data...</td></tr>';
+    
+    // Real-time listener
+    adminUnsubscribe = db.collection("leaderboard")
+        .orderBy("score", "desc")
+        .onSnapshot((querySnapshot) => {
+            const leaderboard = [];
+            querySnapshot.forEach((doc) => {
+                leaderboard.push({ id: doc.id, ...doc.data() });
+            });
+            
+            // JS Secondary Sort (Time Ascending)
+            leaderboard.sort((a, b) => b.score - a.score || a.timeTaken - b.timeTaken);
+            
+            // Stats
+            totalParticipantsEl.innerText = leaderboard.length;
+            if (leaderboard.length > 0) highestScoreEl.innerText = leaderboard[0].score;
+            else highestScoreEl.innerText = '0';
+            
+            // Table
+            leaderboardBody.innerHTML = '';
+            if(leaderboard.length === 0) {
+                leaderboardBody.innerHTML = '<tr><td colspan="6" style="text-align:center;">No participants yet.</td></tr>';
+            }
 
-    if (firebaseConfig.apiKey === "YOUR_API_KEY") {
-        leaderboardBody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:red;">Firebase is not configured! Please add your API keys in script.js</td></tr>';
-        return;
-    }
-
-    try {
-        const querySnapshot = await db.collection("leaderboard")
-            .orderBy("score", "desc")
-            .get();
-        const leaderboard = [];
-        querySnapshot.forEach((doc) => {
-            leaderboard.push({ id: doc.id, ...doc.data() });
+            leaderboard.forEach((entry, index) => {
+                const tr = document.createElement('tr');
+                let rankHtml = `${index + 1}`;
+                if (index === 0) rankHtml = `<span class="rank-badge rank-1">1</span>`;
+                else if (index === 1) rankHtml = `<span class="rank-badge rank-2">2</span>`;
+                else if (index === 2) rankHtml = `<span class="rank-badge rank-3">3</span>`;
+                
+                tr.innerHTML = `
+                    <td>${rankHtml}</td>
+                    <td><strong>${entry.name}</strong><br><small style="color:#94a3b8">${entry.section}</small></td>
+                    <td>${entry.usn}</td>
+                    <td><strong style="color:var(--primary-color)">${entry.score}</strong></td>
+                    <td>${entry.timeTaken}s</td>
+                    <td><button class="btn secondary-btn view-breakdown-btn" style="padding: 0.3rem 0.8rem; margin:0; font-size: 0.8rem;">View</button></td>
+                `;
+                
+                // Add Breakdown logic
+                const viewBtn = tr.querySelector('.view-breakdown-btn');
+                viewBtn.addEventListener('click', () => showBreakdown(entry));
+                
+                leaderboardBody.appendChild(tr);
+            });
+        }, (error) => {
+            console.error("Live listener error: ", error);
+            leaderboardBody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:red;">Live update error.</td></tr>';
         });
+}
 
-        // Stats
-        totalParticipantsEl.innerText = leaderboard.length;
-
-        if (leaderboard.length > 0) {
-            highestScoreEl.innerText = leaderboard[0].score;
-        } else {
-            highestScoreEl.innerText = '0';
-        }
-
-        // Populate Table
-        leaderboardBody.innerHTML = '';
-
-        if (leaderboard.length === 0) {
-            leaderboardBody.innerHTML = '<tr><td colspan="4" style="text-align:center;">No participants yet.</td></tr>';
-        }
-
-        leaderboard.forEach((entry, index) => {
-            const tr = document.createElement('tr');
-
-            // Rank styling
-            let rankHtml = `${index + 1}`;
-            if (index === 0) rankHtml = `<span class="rank-badge rank-1">1</span>`;
-            else if (index === 1) rankHtml = `<span class="rank-badge rank-2">2</span>`;
-            else if (index === 2) rankHtml = `<span class="rank-badge rank-3">3</span>`;
-
-            tr.innerHTML = `
-                <td>${rankHtml}</td>
-                <td><strong>${entry.name}</strong><br><small style="color:#6b7280">${entry.section}</small></td>
-                <td>${entry.usn}</td>
-                <td><strong style="color:var(--primary-color)">${entry.score}</strong></td>
-            `;
-
-            leaderboardBody.appendChild(tr);
-        });
-    } catch (e) {
-        console.error("Error loading admin data: ", e);
-        leaderboardBody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:red;">Error loading data. Check console.</td></tr>';
+function showBreakdown(userData) {
+    breakdownName.innerText = `${userData.name}'s Answers`;
+    
+    if (userData.answers && userData.answers.length > 0) {
+        renderReviewAnswers(userData.answers, breakdownList);
+    } else {
+        breakdownList.innerHTML = '<p style="color:white; text-align:center;">No answer data recorded for this user.</p>';
     }
+    
+    breakdownOverlay.classList.remove('hidden');
 }
 
 btnClearData.addEventListener('click', async () => {
@@ -539,17 +684,23 @@ btnClearData.addEventListener('click', async () => {
         try {
             const querySnapshot = await db.collection("leaderboard").get();
             const deletePromises = [];
-
             querySnapshot.forEach((docSnap) => {
                 deletePromises.push(db.collection("leaderboard").doc(docSnap.id).delete());
             });
-
             await Promise.all(deletePromises);
+            
+            // Also clear announcements
+            const annSnap = await db.collection("announcement").get();
+            const annPromises = [];
+            annSnap.forEach(docSnap => {
+                annPromises.push(db.collection("announcement").doc(docSnap.id).delete());
+            });
+            await Promise.all(annPromises);
+
             console.log("All data cleared.");
-            loadAdminData(); // refresh table
         } catch (e) {
             console.error("Error clearing data: ", e);
-            alert("Error clearing data. Make sure Firebase rules allow deletions.");
+            alert("Error clearing data.");
         }
     }
 });
