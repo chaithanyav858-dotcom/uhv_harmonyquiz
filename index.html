@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Harmony Quiz Game</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="app-header">
+      <div>
+        <p class="eyebrow">Harmony Quiz Game</p>
+        <h1>Understanding Harmony in Society and Nature</h1>
+        <p class="subtitle">A fun quiz to explore how your choices affect people, relationships, and the environment.</p>
+      </div>
+      <button id="adminButton" class="admin-toggle">Admin View</button>
+    </header>
+
+    <main class="card-container">
+      <section id="landingPage" class="card active-card">
+        <div class="hero-panel">
+          <div>
+            <h2>Welcome, Future Harmony Leader!</h2>
+            <p>Enter your details and begin a quiz journey through community, relationships, and nature.</p>
+            <p class="hero-note">Answer thoughtfully, compare your harmony score with friends, and explore the shared leaderboard after each quiz.</p>
+          </div>
+          <div class="hero-image" aria-hidden="true">
+            <div class="planet"></div>
+          </div>
+        </div>
+
+        <div class="feature-grid">
+          <article class="feature-chip">
+            <span class="feature-icon">🌱</span>
+            <h3>15 meaningful questions</h3>
+            <p>Learn about harmony in society, relationships and nature.</p>
+          </article>
+          <article class="feature-chip">
+            <span class="feature-icon">⏱️</span>
+            <h3>30 seconds per question</h3>
+            <p>Take a thoughtful moment to choose the most harmonious answer.</p>
+          </article>
+          <article class="feature-chip">
+            <span class="feature-icon">🏆</span>
+            <h3>Live feedback</h3>
+            <p>See why each choice helps harmony or creates conflict.</p>
+          </article>
+          <article class="feature-chip">
+            <span class="feature-icon">🌍</span>
+            <h3>Shared leaderboard</h3>
+            <p>Track top harmony scores across all participants.</p>
+          </article>
+        </div>
+
+        <form id="userForm" class="form-grid">
+          <label>
+            Name
+            <input type="text" id="playerName" placeholder="Your name" required />
+          </label>
+          <label>
+            USN / ID
+            <input type="text" id="playerId" placeholder="Student ID" required />
+          </label>
+          <label>
+            Section / Class
+            <input type="text" id="playerSection" placeholder="Section or class" required />
+          </label>
+          <button type="submit" class="primary-btn">Start Quiz</button>
+        </form>
+      </section>
+
+      <section id="quizPage" class="card">
+        <div class="panel-header">
+          <div>
+            <p class="eyebrow">Quiz in progress</p>
+            <h2 id="questionTitle">Question 1</h2>
+          </div>
+          <div class="status-stack">
+            <div class="status-pill">Time left: <span id="timerValue">30</span>s</div>
+            <div class="status-pill secondary">Score: <span id="scoreValue">0</span></div>
+          </div>
+        </div>
+
+        <div class="progress-bar-wrap">
+          <div id="progressBar" class="progress-bar"></div>
+        </div>
+        <div class="question-card quiz-card">
+          <p id="questionText" class="question-text"></p>
+          <div class="choices-grid" id="choicesList"></div>
+        </div>
+        <div class="hint-panel hidden" id="feedbackPanel">
+          <h3>Why this matters</h3>
+          <p id="feedbackText"></p>
+          <button id="nextButton" class="secondary-btn">Next Question</button>
+        </div>
+      </section>
+
+      <section id="resultPage" class="card">
+        <div class="result-header">
+          <h2>Quiz Complete!</h2>
+          <p id="resultMessage" class="result-message"></p>
+        </div>
+        <div class="result-grid">
+          <div class="result-card">
+            <h3>Total Score</h3>
+            <p id="finalScore" class="score-value">0</p>
+          </div>
+          <div class="result-card">
+            <h3>Total Time</h3>
+            <p id="totalTime" class="score-value">0s</p>
+          </div>
+          <div class="result-card">
+            <h3>Harmony Badge</h3>
+            <p id="badgeText">Ready to shine</p>
+          </div>
+        </div>
+        <div class="button-row">
+          <button id="restartButton" class="primary-btn">Restart Quiz</button>
+          <button id="leaderboardButton" class="secondary-btn">View Leaderboard</button>
+        </div>
+        <div class="review-panel" id="reviewPanel">
+          <h3>Review your answers</h3>
+          <p id="reviewSummary" class="review-summary"></p>
+          <div id="reviewList"></div>
+        </div>
+      </section>
+
+      <section id="leaderboardPage" class="card">
+        <div class="panel-header">
+          <div>
+            <p class="eyebrow">Leaderboard</p>
+            <h2>Top Harmony Scorers</h2>
+          </div>
+          <button id="closeLeaderboard" class="secondary-btn">Close</button>
+        </div>
+        <div class="leaderboard-card">
+          <div class="leaderboard-header">
+            <span>Rank</span>
+            <span>Name</span>
+            <span>Score</span>
+            <span>Time</span>
+          </div>
+          <div id="leaderboardList"></div>
+        </div>
+      </section>
+
+      <section id="adminPage" class="card admin-card hidden">
+        <div class="panel-header">
+          <div>
+            <p class="eyebrow">Admin Dashboard</p>
+            <h2>Participant Summary</h2>
+          </div>
+          <button id="closeAdmin" class="secondary-btn">Close</button>
+        </div>
+
+        <div class="admin-grid">
+          <div class="admin-card-small">
+            <h3>Highest Scorer</h3>
+            <p id="topScorer">No data yet</p>
+          </div>
+          <div class="admin-card-small">
+            <h3>Total Participants</h3>
+            <p id="totalParticipants">0</p>
+          </div>
+        </div>
+
+        <div class="admin-actions">
+          <button id="announceWinner" class="primary-btn">Surprise Winner Announcement</button>
+          <p id="winnerMessage" class="winner-message">Press the button to reveal the top player.</p>
+        </div>
+
+        <div class="participants-table">
+          <div class="table-header">
+            <span>Name</span>
+            <span>ID</span>
+            <span>Section</span>
+            <span>Score</span>
+            <span>Time</span>
+            <span>Action</span>
+          </div>
+          <div id="participantsList"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
