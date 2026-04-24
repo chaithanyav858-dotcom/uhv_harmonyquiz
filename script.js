@@ -1,594 +1,546 @@
+/* ==========================================================================
+   🔥 FIREBASE CONFIGURATION
+   ========================================================================== */
+// Replace these values with your actual Firebase config!
+const firebaseConfig = {
+  apiKey: "AIzaSyDGx65tCt54UVKus6ON7jVP8eCHbhr3P0E",
+  authDomain: "uhv-harmony-quiz.firebaseapp.com",
+  projectId: "uhv-harmony-quiz",
+  storageBucket: "uhv-harmony-quiz.firebasestorage.app",
+  messagingSenderId: "411795678988",
+  appId: "1:411795678988:web:5ec3c47559078e73ec0b29"
+};
+
+// Initialize Firebase
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+/* ==========================================================================
+   State & Data Variables
+   ========================================================================== */
+let currentUser = {
+    name: '',
+    usn: '',
+    section: '',
+    score: 0,
+    timeTaken: 0
+};
+
+let currentQuestionIndex = 0;
+let timerInterval;
+let timeLeft = 10;
+let questionStartTime = 0;
+
+// Quiz Database: 15 Questions based on Universal Human Values (Society & Nature)
 const questions = [
-  {
-    text: 'How does helping a classmate with homework support harmony in society?',
-    options: [
-      { label: 'I ignore them and do my own work.', value: 'negative', points: -2, explanation: 'Avoiding help can weaken trust and cooperation among classmates.' },
-      { label: 'I offer a small hint if asked.', value: 'neutral', points: 3, explanation: 'A little support keeps the relationship stable, but it could be stronger.' },
-      { label: 'I explain kindly and celebrate their effort.', value: 'positive', points: 10, explanation: 'Encouraging care and kindness builds stronger community bonds.' }
-    ]
-  },
-  {
-    text: 'What is the most harmonious way to respond when someone is upset?',
-    options: [
-      { label: 'Tell them to stop feeling bad.', value: 'negative', points: -2, explanation: 'Dismissing emotions can make relationships distant and hurtful.' },
-      { label: 'Listen quietly and offer support softly.', value: 'neutral', points: 3, explanation: 'Listening helps, but adding constructive support can improve harmony more.' },
-      { label: 'Listen, empathize, and suggest a calm solution.', value: 'positive', points: 10, explanation: 'Empathy with helpful advice encourages trust and peaceful connections.' }
-    ]
-  },
-  {
-    text: 'Which choice protects nature and promotes harmony with the environment?',
-    options: [
-      { label: 'Throw wrappers on the ground.', value: 'negative', points: -2, explanation: 'Litter harms nature and shows little respect for our shared environment.' },
-      { label: 'Dispose of trash in a bin when possible.', value: 'neutral', points: 3, explanation: 'A decent choice, though recycling would be even better.' },
-      { label: 'Recycle and pick up litter to keep the area clean.', value: 'positive', points: 10, explanation: 'Helping nature protects the planet and inspires others to do the same.' }
-    ]
-  },
-  {
-    text: 'How can you show harmony when working on a group project?',
-    options: [
-      { label: 'Do everything myself and ignore team ideas.', value: 'negative', points: -2, explanation: 'Taking control without collaboration creates conflict and stress.' },
-      { label: 'Divide tasks evenly but avoid discussing opinions.', value: 'neutral', points: 3, explanation: 'Fair work sharing helps, but teamwork grows stronger with open communication.' },
-      { label: 'Listen, share ideas, and help teammates succeed.', value: 'positive', points: 10, explanation: 'True harmony comes from cooperation, respect, and encouragement.' }
-    ]
-  },
-  {
-    text: 'What is the healthiest response when someone disagrees with you?',
-    options: [
-      { label: 'Argue loudly until they agree.', value: 'negative', points: -2, explanation: 'Arguments harm peace and make relationships tense.' },
-      { label: 'Accept their opinion without discussing it.', value: 'neutral', points: 3, explanation: 'Respecting views is good, but discussion can still be kind and constructive.' },
-      { label: 'Ask questions and try to understand their perspective.', value: 'positive', points: 10, explanation: 'Understanding other views builds respect and strong social harmony.' }
-    ]
-  },
-  {
-    text: 'Which habit helps create harmony with nature during a picnic?',
-    options: [
-      { label: 'Leave food and wrappers behind.', value: 'negative', points: -2, explanation: 'Leaving trash hurts wildlife and spoils natural beauty.' },
-      { label: 'Take your trash home with you.', value: 'neutral', points: 3, explanation: 'Caring for the place keeps it clean, yet you can also choose eco-friendly products.' },
-      { label: 'Use reusable items and clean up carefully.', value: 'positive', points: 10, explanation: 'Reducing waste and cleaning up honors nature and sets a good example.' }
-    ]
-  },
-  {
-    text: 'How does sharing your classroom supplies support harmony?',
-    options: [
-      { label: 'Keep your supplies only for yourself.', value: 'negative', points: -2, explanation: 'Holding back can make classmates feel excluded and lonely.' },
-      { label: 'Share when people ask for them.', value: 'neutral', points: 3, explanation: 'Sharing on request is helpful, but offering support more often is stronger.' },
-      { label: 'Offer supplies generously and encourage others.', value: 'positive', points: 10, explanation: 'Generosity creates trust, collaboration, and a positive learning culture.' }
-    ]
-  },
-  {
-    text: 'What is the best way to care for a shared garden at school?',
-    options: [
-      { label: 'Ignore the plants and let others do it.', value: 'negative', points: -2, explanation: 'Neglecting shared spaces reduces beauty and teamwork.' },
-      { label: 'Water the plants sometimes when reminded.', value: 'neutral', points: 3, explanation: 'Helping occasionally is okay, but regular care is more harmonious.' },
-      { label: 'Take responsibility every week and encourage others too.', value: 'positive', points: 10, explanation: 'Active care makes the garden thrive and brings people together.' }
-    ]
-  },
-  {
-    text: 'How can you reduce conflict in your friend group?',
-    options: [
-      { label: 'Share rumors and gossip to feel involved.', value: 'negative', points: -2, explanation: 'Gossip damages trust and creates unnecessary tension.' },
-      { label: 'Stay quiet when there is drama.', value: 'neutral', points: 3, explanation: 'Avoiding drama is okay, but you can also support positive communication.' },
-      { label: 'Encourage honest, calm discussions and kindness.', value: 'positive', points: 10, explanation: 'Calm honesty helps friendships grow and maintains harmony.' }
-    ]
-  },
-  {
-    text: 'Which choice helps preserve water and harmony with nature?',
-    options: [
-      { label: 'Leave the tap running while brushing your teeth.', value: 'negative', points: -2, explanation: 'Wasting water shows a lack of care for shared natural resources.' },
-      { label: 'Turn off the tap most of the time.', value: 'neutral', points: 3, explanation: 'Saving water is good, but small extra steps can improve the impact.' },
-      { label: 'Use a cup or switch off the tap completely.', value: 'positive', points: 10, explanation: 'Careful water use protects nature and sets a positive example.' }
-    ]
-  },
-  {
-    text: 'What is an example of harmony with community values?',
-    options: [
-      { label: 'Ignore local rules and do what I want.', value: 'negative', points: -2, explanation: 'Disregarding rules damages social trust and safety.' },
-      { label: 'Follow rules when reminded by others.', value: 'neutral', points: 3, explanation: 'Following rules is helpful, but active participation is more powerful.' },
-      { label: 'Respect local values and help others follow them kindly.', value: 'positive', points: 10, explanation: 'Positive participation strengthens community and mutual respect.' }
-    ]
-  },
-  {
-    text: 'How should you treat someone who needs comfort after a mistake?',
-    options: [
-      { label: 'Make fun of them to lighten the mood.', value: 'negative', points: -2, explanation: 'Mocking hurts feelings and breaks trust.' },
-      { label: 'Stay close but say little.', value: 'neutral', points: 3, explanation: 'Being present is good, but words of care help more.' },
-      { label: 'Encourage them and remind them mistakes are normal.', value: 'positive', points: 10, explanation: 'Support and empathy rebuild confidence and harmony.' }
-    ]
-  },
-  {
-    text: 'What is the best habit for respecting classroom harmony?',
-    options: [
-      { label: 'Talk loudly while the teacher speaks.', value: 'negative', points: -2, explanation: 'Interruptions make it hard for everyone to learn together.' },
-      { label: 'Stay quiet but avoid contributing answers.', value: 'neutral', points: 3, explanation: 'Listening is helpful, but engaging respectfully is even better.' },
-      { label: 'Listen, raise your hand, and contribute kindly.', value: 'positive', points: 10, explanation: 'Active respect encourages better learning and stronger relationships.' }
-    ]
-  },
-  {
-    text: 'How can you show harmony during group playtime?',
-    options: [
-      { label: 'Take the best role and ignore others.', value: 'negative', points: -2, explanation: 'Selfish play can hurt others and spoil the fun.' },
-      { label: 'Share roles when asked.', value: 'neutral', points: 3, explanation: 'Fairness is okay, but inviting others makes play more joyful.' },
-      { label: 'Invite friends, share turns, and celebrate everyone.', value: 'positive', points: 10, explanation: 'Inclusive play builds friendship and peaceful group energy.' }
-    ]
-  },
-  {
-    text: 'Which habit shows respect for nature on a hike?',
-    options: [
-      { label: 'Pick flowers and disturb wildlife.', value: 'negative', points: -2, explanation: 'Disturbing nature harms plants and animals.' },
-      { label: 'Stay on the trail and watch quietly.', value: 'neutral', points: 3, explanation: 'Respecting the trail helps, but also avoiding noise is more thoughtful.' },
-      { label: 'Observe quietly and leave everything exactly as it was.', value: 'positive', points: 10, explanation: 'Preserving nature helps ecosystems remain healthy and peaceful.' }
-    ]
-  },
-  {
-    text: 'How can you help create harmony at home?',
-    options: [
-      { label: 'Refuse to help with chores.', value: 'negative', points: -2, explanation: 'Refusing help can cause stress and unfairness for family members.' },
-      { label: 'Help with chores when asked.', value: 'neutral', points: 3, explanation: 'Helping when asked is nice, but offering help willingly strengthens harmony.' },
-      { label: 'Offer help, listen to needs, and do your part cheerfully.', value: 'positive', points: 10, explanation: 'Willing contribution creates a calm, caring home atmosphere.' }
-    ]
-  }
+    {
+        question: "When there is a conflict in your project team, what is the best approach?",
+        options: [
+            { text: "Listen to everyone and find a mutually beneficial solution.", type: "positive", feedback: "Excellent! Mutual respect and dialogue promote harmony in relationships." },
+            { text: "Ignore the conflict and focus only on your own work.", type: "neutral", feedback: "Okay. While it avoids immediate arguments, ignoring issues can hurt team harmony long-term." },
+            { text: "Argue until your idea is accepted because it's the best.", type: "negative", feedback: "Domination creates resentment, leading to conflict rather than harmony." }
+        ]
+    },
+    {
+        question: "How should we view natural resources?",
+        options: [
+            { text: "As a web of interconnected life that we must nurture and protect.", type: "positive", feedback: "Spot on! Recognizing our coexistence with nature ensures sustainable harmony." },
+            { text: "As raw materials meant for human consumption.", type: "neutral", feedback: "This view is common, but solely viewing nature as a resource leads to exploitation." },
+            { text: "As unlimited assets to be exploited for maximum profit.", type: "negative", feedback: "Exploitation leads to environmental degradation and breaks the harmony of nature." }
+        ]
+    },
+    {
+        question: "What is the basis of a harmonious society?",
+        options: [
+            { text: "Fear of strict laws and punishments.", type: "negative", feedback: "Fear only controls behavior temporarily; it doesn't build true understanding or peace." },
+            { text: "Economic wealth and infrastructure.", type: "neutral", feedback: "Wealth is useful, but without mutual trust, a rich society can still be deeply unhappy." },
+            { text: "Trust, mutual fulfillment, and right understanding.", type: "positive", feedback: "Correct! Trust and right understanding are the foundation of a fearless, harmonious society." }
+        ]
+    },
+    {
+        question: "Your neighbor plays loud music late at night. You should:",
+        options: [
+            { text: "Call the police immediately to teach them a lesson.", type: "negative", feedback: "Immediate escalation destroys neighborly relations and creates hostility." },
+            { text: "Politely discuss how the noise affects your sleep and request a compromise.", type: "positive", feedback: "Great! Open communication builds mutual respect and resolves conflicts peacefully." },
+            { text: "Buy earplugs and never speak to them again.", type: "neutral", feedback: "Avoidance might solve your sleep issue but it degrades community connection." }
+        ]
+    },
+    {
+        question: "True happiness comes from:",
+        options: [
+            { text: "Accumulating more physical facilities and gadgets than others.", type: "negative", feedback: "Material goods provide temporary comfort, not continuous happiness." },
+            { text: "Being in harmony within oneself, with others, and with nature.", type: "positive", feedback: "Perfect! Continuous happiness is the state of harmony at all levels of existence." },
+            { text: "Achieving a successful career and high social status.", type: "neutral", feedback: "Success is nice, but without inner peace and good relationships, it feels empty." }
+        ]
+    },
+    {
+        question: "What does 'Right Understanding' mean?",
+        options: [
+            { text: "Knowing how to make a lot of money quickly.", type: "negative", feedback: "This is a misconception. Wealth alone doesn't mean you understand life's purpose." },
+            { text: "Acquiring a lot of technical skills and degrees.", type: "neutral", feedback: "Skills are important for living, but they don't automatically provide clarity of purpose." },
+            { text: "Clarity about oneself, one's purpose, and relationship with existence.", type: "positive", feedback: "Exactly. Right understanding is the core of human values and self-harmony." }
+        ]
+    },
+    {
+        question: "When you see someone struggling with heavy bags, what is the harmonious action?",
+        options: [
+            { text: "Offer to help them carry the bags.", type: "positive", feedback: "Wonderful! Compassion and helping others strengthens societal bonds." },
+            { text: "Walk past quickly; it's not your problem.", type: "negative", feedback: "Indifference weakens social trust and community spirit." },
+            { text: "Watch them to see if they eventually manage it.", type: "neutral", feedback: "While not harmful, passive observation misses an opportunity to foster goodwill." }
+        ]
+    },
+    {
+        question: "The feeling of 'Affection' in a relationship implies:",
+        options: [
+            { text: "Expecting the other person to always agree with you.", type: "negative", feedback: "Expectation of compliance is control, not affection." },
+            { text: "Feeling related to the other, accepting them as they are.", type: "positive", feedback: "Yes! Affection is the feeling of being related, leading to mutual fulfillment." },
+            { text: "Being polite to them only when you need something.", type: "neutral", feedback: "Conditional politeness is transactional, lacking true affection." }
+        ]
+    },
+    {
+        question: "How should society handle waste?",
+        options: [
+            { text: "Dump it in rivers or oceans where it can't be seen.", type: "negative", feedback: "This causes severe ecological imbalance and destroys nature's harmony." },
+            { text: "Rely completely on the government to clean it up.", type: "neutral", feedback: "The government plays a role, but individual responsibility is required for true sustainability." },
+            { text: "Reduce, reuse, recycle, and move towards zero waste.", type: "positive", feedback: "Brilliant! This respects the cyclability of nature and preserves the environment." }
+        ]
+    },
+    {
+        question: "What is 'Prosperity' in the true sense?",
+        options: [
+            { text: "Having more money than your neighbors.", type: "negative", feedback: "Comparison leads to endless competition and dissatisfaction." },
+            { text: "Having just enough to survive day by day.", type: "neutral", feedback: "Survival is basic, but prosperity implies a feeling of abundance, not just scraping by." },
+            { text: "The feeling of having more physical facilities than is required.", type: "positive", feedback: "Correct. It's a mindset of abundance combined with right utilization." }
+        ]
+    },
+    {
+        question: "If a classmate from a different background joins your group:",
+        options: [
+            { text: "Welcome them and learn about their culture.", type: "positive", feedback: "Great! Embracing diversity enriches relationships and societal harmony." },
+            { text: "Ignore them unless they speak to you first.", type: "neutral", feedback: "Apathy prevents the formation of inclusive, harmonious environments." },
+            { text: "Exclude them because they are different.", type: "negative", feedback: "Discrimination creates division and destroys societal harmony." }
+        ]
+    },
+    {
+        question: "Regarding other living beings (animals, birds):",
+        options: [
+            { text: "We should recognize our mutual dependence and protect their habitats.", type: "positive", feedback: "Excellent! Recognizing the interconnectedness of all life is key to natural harmony." },
+            { text: "They exist solely for human entertainment and consumption.", type: "negative", feedback: "This anthropocentric view justifies cruelty and ecological destruction." },
+            { text: "We should leave them alone as long as they don't bother us.", type: "neutral", feedback: "Coexistence is good, but active protection is better for a thriving ecosystem." }
+        ]
+    },
+    {
+        question: "What creates a sense of 'Fearlessness' in society?",
+        options: [
+            { text: "Building higher walls and more weapons.", type: "negative", feedback: "Physical defenses address symptoms, not the root cause of fear, often increasing tension." },
+            { text: "Having a strong police force.", type: "neutral", feedback: "Law enforcement is necessary, but true fearlessness comes from inner trust, not external force." },
+            { text: "Mutual trust, justice, and equitable distribution of resources.", type: "positive", feedback: "Exactly. When everyone's needs are met and trust exists, fear naturally disappears." }
+        ]
+    },
+    {
+        question: "When you make a mistake that affects others, you should:",
+        options: [
+            { text: "Acknowledge it, apologize sincerely, and fix the damage.", type: "positive", feedback: "Perfect. Accountability restores trust and heals relationships." },
+            { text: "Hide it and hope nobody finds out.", type: "negative", feedback: "Deceit breaks trust, which is the foundation of harmonious relationships." },
+            { text: "Say 'sorry' quickly but blame circumstances.", type: "neutral", feedback: "Deflecting blame prevents genuine resolution and learning." }
+        ]
+    },
+    {
+        question: "Ultimately, 'Universal Human Order' means:",
+        options: [
+            { text: "One global government controlling everything.", type: "negative", feedback: "Centralized control without right understanding leads to tyranny, not harmony." },
+            { text: "Everyone living peacefully but in isolation.", type: "neutral", feedback: "Isolation avoids conflict but misses out on the joy of mutual fulfillment." },
+            { text: "Harmony from family to world family, based on right understanding.", type: "positive", feedback: "Yes! A continuous chain of harmonious relationships extending to the whole world." }
+        ]
+    }
 ];
 
-const quizState = {
-  player: {
-    name: '',
-    id: '',
-    section: ''
-  },
-  currentQuestion: 0,
-  score: 0,
-  totalTime: 0,
-  timer: null,
-  questionTime: 30,
-  lastAnswerTime: 0,
-  participants: [],
-  answerLocked: false,
-  userAnswers: []
+/* ==========================================================================
+   DOM Elements
+   ========================================================================== */
+const screens = {
+    welcome: document.getElementById('welcome-screen'),
+    quiz: document.getElementById('quiz-screen'),
+    result: document.getElementById('result-screen'),
+    admin: document.getElementById('admin-screen')
 };
 
-const ADMIN_PASSWORD = 'harmony-admin-2026';
+// Form & Buttons
+const regForm = document.getElementById('registration-form');
+const btnShowAdmin = document.getElementById('btn-show-admin');
+const btnCloseAdmin = document.getElementById('btn-close-admin');
+const btnNextQuestion = document.getElementById('btn-next-question');
+const btnViewLeaderboard = document.getElementById('btn-view-leaderboard');
+const btnRestart = document.getElementById('btn-restart');
+const btnClearData = document.getElementById('btn-clear-data');
 
-const elements = {
-  landingPage: document.getElementById('landingPage'),
-  quizPage: document.getElementById('quizPage'),
-  resultPage: document.getElementById('resultPage'),
-  leaderboardPage: document.getElementById('leaderboardPage'),
-  adminPage: document.getElementById('adminPage'),
-  userForm: document.getElementById('userForm'),
-  playerName: document.getElementById('playerName'),
-  playerId: document.getElementById('playerId'),
-  playerSection: document.getElementById('playerSection'),
-  questionTitle: document.getElementById('questionTitle'),
-  questionText: document.getElementById('questionText'),
-  choicesList: document.getElementById('choicesList'),
-  timerValue: document.getElementById('timerValue'),
-  scoreValue: document.getElementById('scoreValue'),
-  progressBar: document.getElementById('progressBar'),
-  feedbackPanel: document.getElementById('feedbackPanel'),
-  feedbackText: document.getElementById('feedbackText'),
-  nextButton: document.getElementById('nextButton'),
-  finalScore: document.getElementById('finalScore'),
-  resultMessage: document.getElementById('resultMessage'),
-  badgeText: document.getElementById('badgeText'),
-  totalTime: document.getElementById('totalTime'),
-  restartButton: document.getElementById('restartButton'),
-  leaderboardButton: document.getElementById('leaderboardButton'),
-  reviewPanel: document.getElementById('reviewPanel'),
-  reviewSummary: document.getElementById('reviewSummary'),
-  reviewList: document.getElementById('reviewList'),
-  leaderboardList: document.getElementById('leaderboardList'),
-  closeLeaderboard: document.getElementById('closeLeaderboard'),
-  adminButton: document.getElementById('adminButton'),
-  closeAdmin: document.getElementById('closeAdmin'),
-  announceWinner: document.getElementById('announceWinner'),
-  winnerMessage: document.getElementById('winnerMessage'),
-  topScorer: document.getElementById('topScorer'),
-  totalParticipants: document.getElementById('totalParticipants'),
-  participantsList: document.getElementById('participantsList')
-};
+// Quiz UI
+const questionTracker = document.getElementById('question-tracker');
+const progressFill = document.getElementById('progress-fill');
+const timeLeftEl = document.getElementById('time-left');
+const timerCircle = document.querySelector('.timer-circle');
+const questionText = document.getElementById('question-text');
+const optionsContainer = document.getElementById('options-container');
 
-function getApiRoot() {
-  if ((window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') && window.location.port && window.location.port !== '3000') {
-    return 'http://localhost:3000';
-  }
-  return '';
+// Feedback UI
+const feedbackOverlay = document.getElementById('feedback-overlay');
+const feedbackIcon = document.getElementById('feedback-icon');
+const feedbackTitle = document.getElementById('feedback-title');
+const feedbackExplanation = document.getElementById('feedback-explanation');
+const scoreUpdateEl = document.getElementById('score-update');
+
+// Result UI
+const finalScoreEl = document.getElementById('final-score');
+const performanceBadge = document.getElementById('performance-badge');
+const resultMessage = document.getElementById('result-message');
+const resultIcon = document.getElementById('result-icon');
+
+// Admin UI
+const totalParticipantsEl = document.getElementById('total-participants');
+const highestScoreEl = document.getElementById('highest-score');
+const leaderboardBody = document.getElementById('leaderboard-body');
+
+
+/* ==========================================================================
+   Navigation Functions
+   ========================================================================== */
+function showScreen(screenName) {
+    Object.values(screens).forEach(screen => {
+        screen.classList.remove('active');
+        screen.classList.add('hidden');
+    });
+    screens[screenName].classList.remove('hidden');
+    screens[screenName].classList.add('active');
 }
 
-function normalizeParticipants(participants) {
-  return participants.map((participant) => ({
-    ...participant,
-    entryId: participant.entryId || `${participant.id}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
-  }));
+/* ==========================================================================
+   Initialization & Game Logic
+   ========================================================================== */
+// Start Game
+regForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    
+    // Capture user details
+    currentUser.name = document.getElementById('student-name').value.trim();
+    currentUser.usn = document.getElementById('student-usn').value.trim();
+    currentUser.section = document.getElementById('student-section').value.trim();
+    currentUser.score = 0;
+    currentUser.timeTaken = 0;
+    
+    // Reset quiz variables
+    currentQuestionIndex = 0;
+    
+    showScreen('quiz');
+    loadQuestion();
+});
+
+// Load Question
+function loadQuestion() {
+    const q = questions[currentQuestionIndex];
+    
+    // Update Header
+    questionTracker.innerText = `Question ${currentQuestionIndex + 1}/${questions.length}`;
+    progressFill.style.width = `${((currentQuestionIndex) / questions.length) * 100}%`;
+    
+    // Set text
+    questionText.innerText = q.question;
+    optionsContainer.innerHTML = '';
+    
+    // Shuffle options so positive isn't always in the same spot
+    const shuffledOptions = [...q.options].sort(() => Math.random() - 0.5);
+    
+    shuffledOptions.forEach((option) => {
+        const btn = document.createElement('button');
+        btn.classList.add('option-btn');
+        btn.innerText = option.text;
+        
+        btn.addEventListener('click', () => handleAnswer(option, btn, shuffledOptions));
+        
+        optionsContainer.appendChild(btn);
+    });
+    
+    startTimer();
 }
 
-async function loadParticipants() {
-  try {
-    const apiRoot = getApiRoot();
-    const response = await fetch(`${apiRoot}/api/participants`);
-    if (!response.ok) throw new Error('Unable to load participants');
-    quizState.participants = normalizeParticipants(await response.json());
-  } catch (error) {
-    const stored = localStorage.getItem('harmonyQuizParticipants');
-    quizState.participants = stored ? normalizeParticipants(JSON.parse(stored)) : [];
-  }
-}
-
-function saveParticipants() {
-  localStorage.setItem('harmonyQuizParticipants', JSON.stringify(quizState.participants));
-}
-
-function showView(view) {
-  [elements.landingPage, elements.quizPage, elements.resultPage, elements.leaderboardPage, elements.adminPage].forEach((section) => {
-    section.classList.remove('active-card');
-  });
-  view.classList.add('active-card');
-}
-
-function getPerformanceLabel(score) {
-  if (score >= 120) return { message: 'Harmony Leader', badge: '🌟 You inspire peace and teamwork!' };
-  if (score >= 70) return { message: 'Learning Mind', badge: '✨ You understand harmony and keep growing.' };
-  return { message: 'Needs Reflection', badge: '💡 Think about how choices affect others and nature.' };
-}
-
-function updateProgress() {
-  const progress = ((quizState.currentQuestion + 1) / questions.length) * 100;
-  elements.progressBar.style.width = `${progress}%`;
-  elements.questionTitle.textContent = `Question ${quizState.currentQuestion + 1} / ${questions.length}`;
-}
-
-function renderQuestion() {
-  const current = questions[quizState.currentQuestion];
-  elements.questionText.textContent = current.text;
-  elements.choicesList.innerHTML = '';
-
-  const shuffledOptions = current.options
-    .map((option, index) => ({ ...option, originalIndex: index }))
-    .sort(() => Math.random() - 0.5);
-
-  quizState.currentOptions = shuffledOptions;
-
-  shuffledOptions.forEach((option, index) => {
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'choice-button';
-    button.innerHTML = `<div class="choice-label">${['A', 'B', 'C'][index]}</div>
-                        <div class="choice-text">${option.label}</div>`;
-    button.addEventListener('click', () => chooseAnswer(option, button, index));
-    elements.choicesList.appendChild(button);
-  });
-}
-
+// Timer Logic
 function startTimer() {
-  quizState.questionTime = 30;
-  elements.timerValue.textContent = quizState.questionTime;
-  quizState.lastAnswerTime = Date.now();
+    timeLeft = 10;
+    timeLeftEl.innerText = timeLeft;
+    timerCircle.classList.remove('warning');
+    questionStartTime = Date.now();
+    
+    clearInterval(timerInterval);
+    timerInterval = setInterval(() => {
+        timeLeft--;
+        timeLeftEl.innerText = timeLeft;
+        
+        if (timeLeft <= 3) {
+            timerCircle.classList.add('warning');
+        }
+        
+        if (timeLeft <= 0) {
+            clearInterval(timerInterval);
+            handleTimeOut();
+        }
+    }, 1000);
+}
 
-  if (quizState.timer) {
-    clearInterval(quizState.timer);
-  }
+function stopTimer() {
+    clearInterval(timerInterval);
+}
 
-  quizState.timer = setInterval(() => {
-    quizState.questionTime -= 1;
-    elements.timerValue.textContent = quizState.questionTime;
-
-    if (quizState.questionTime <= 0) {
-      clearInterval(quizState.timer);
-      handleTimeout();
+// Handle Answer
+function handleAnswer(selectedOption, btnElement, allOptions) {
+    stopTimer();
+    
+    const timeToAnswer = (Date.now() - questionStartTime) / 1000;
+    currentUser.timeTaken += timeToAnswer;
+    
+    // Disable all buttons
+    const allBtns = optionsContainer.querySelectorAll('.option-btn');
+    allBtns.forEach(b => b.style.pointerEvents = 'none');
+    
+    // Style selected button
+    btnElement.classList.add('selected');
+    
+    // Calculate Score
+    let pointsEarned = 0;
+    
+    if (selectedOption.type === 'positive') {
+        btnElement.classList.add('correct');
+        if (timeLeft >= 5) {
+            pointsEarned = 10; // Fast + Correct
+        } else {
+            pointsEarned = 6;  // Slow + Correct
+        }
+    } else if (selectedOption.type === 'neutral') {
+        pointsEarned = 3;
+    } else if (selectedOption.type === 'negative') {
+        btnElement.classList.add('wrong');
+        pointsEarned = 0; 
+        
+        // Highlight the correct one
+        allBtns.forEach(b => {
+            const optData = allOptions.find(o => o.text === b.innerText);
+            if (optData && optData.type === 'positive') {
+                b.classList.add('correct');
+            }
+        });
     }
-  }, 1000);
+    
+    currentUser.score += pointsEarned;
+    
+    // Show Feedback after a tiny delay
+    setTimeout(() => {
+        showFeedback(selectedOption, pointsEarned);
+    }, 800);
 }
 
-function getCorrectIndex(question) {
-  return typeof question.correctIndex === 'number' ? question.correctIndex : question.options.findIndex((opt) => opt.value === 'positive');
+function handleTimeOut() {
+    const allBtns = optionsContainer.querySelectorAll('.option-btn');
+    allBtns.forEach(b => b.style.pointerEvents = 'none');
+    
+    showFeedback({
+        type: 'negative',
+        feedback: "Time's up! Quick decision-making is often required in life."
+    }, 0);
 }
 
-function handleTimeout() {
-  quizState.answerLocked = true;
-  quizState.totalTime += 30;
-  const currentQuestion = questions[quizState.currentQuestion];
-  const correctIndex = getCorrectIndex(currentQuestion);
-  elements.choicesList.querySelectorAll('button').forEach((choiceButton) => {
-    choiceButton.disabled = true;
-    choiceButton.style.cursor = 'not-allowed';
-  });
-  quizState.userAnswers[quizState.currentQuestion] = {
-    selectedIndex: null,
-    selectedText: 'No answer selected',
-    correctIndex,
-    correctText: currentQuestion.options[correctIndex].label,
-    correct: false
-  };
-  displayFeedback({ explanation: 'Time is up! Delayed choices make it harder to create harmony, so this answer is not counted.' });
-}
-
-function chooseAnswer(option, button, index) {
-  if (quizState.answerLocked) return;
-  quizState.answerLocked = true;
-  clearInterval(quizState.timer);
-
-  const elapsed = 30 - quizState.questionTime;
-  const speedBonus = Math.max(0, 30 - elapsed);
-  let earned = option.points;
-  if (option.value === 'positive') {
-    earned += Math.round(speedBonus * 0.4);
-  }
-  quizState.score += Math.max(0, earned);
-  quizState.totalTime += elapsed;
-
-  const currentQuestion = questions[quizState.currentQuestion];
-  const correctIndex = getCorrectIndex(currentQuestion);
-  quizState.userAnswers[quizState.currentQuestion] = {
-    selectedIndex: option.originalIndex,
-    selectedText: option.label,
-    correctIndex,
-    correctText: currentQuestion.options[correctIndex].label,
-    correct: option.value === 'positive'
-  };
-
-  button.classList.add('selected');
-  disableChoices();
-  elements.scoreValue.textContent = quizState.score;
-  displayFeedback(option);
-}
-
-function displayFeedback(option) {
-  elements.feedbackText.textContent = option.explanation || 'Waiting for your answer...';
-  elements.feedbackPanel.classList.remove('hidden');
-  elements.nextButton.focus();
-}
-
-function disableChoices() {
-  elements.choicesList.querySelectorAll('button').forEach((button) => {
-    button.disabled = true;
-    button.style.cursor = 'not-allowed';
-  });
-}
-
-async function finishQuiz() {
-  clearInterval(quizState.timer);
-  const performance = getPerformanceLabel(quizState.score);
-  elements.finalScore.textContent = quizState.score;
-  elements.totalTime.textContent = `${quizState.totalTime}s`;
-  elements.resultMessage.textContent = performance.message;
-  elements.badgeText.textContent = performance.badge;
-  renderReview();
-  await saveParticipant();
-  showView(elements.resultPage);
-}
-
-async function saveParticipant() {
-  const participant = {
-    name: quizState.player.name,
-    id: quizState.player.id,
-    section: quizState.player.section,
-    score: quizState.score,
-    time: quizState.totalTime,
-    entryId: `${quizState.player.id}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
-  };
-
-  quizState.participants.push(participant);
-  quizState.participants = normalizeParticipants(quizState.participants);
-  quizState.participants.sort((a, b) => b.score - a.score || a.time - b.time);
-
-  try {
-    const apiRoot = getApiRoot();
-    const response = await fetch(`${apiRoot}/api/participants`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(participant)
-    });
-    if (!response.ok) {
-      throw new Error('API save failed');
+// Feedback Overlay
+function showFeedback(option, pointsEarned) {
+    feedbackExplanation.innerText = option.feedback;
+    
+    // Reset classes
+    scoreUpdateEl.className = 'score-update';
+    
+    if (option.type === 'positive') {
+        feedbackIcon.innerText = '🌟';
+        feedbackTitle.innerText = pointsEarned === 10 ? 'Brilliant & Fast!' : 'Great Choice!';
+        scoreUpdateEl.innerText = `+${pointsEarned} Points`;
+        scoreUpdateEl.classList.add('positive');
+    } else if (option.type === 'neutral') {
+        feedbackIcon.innerText = '⚖️';
+        feedbackTitle.innerText = 'Fair Enough';
+        scoreUpdateEl.innerText = `+${pointsEarned} Points`;
+        scoreUpdateEl.classList.add('neutral');
+    } else {
+        feedbackIcon.innerText = '🌱';
+        feedbackTitle.innerText = 'Room for Growth';
+        scoreUpdateEl.innerText = `+${pointsEarned} Points`;
+        scoreUpdateEl.classList.add('negative');
     }
-  } catch (error) {
-    saveParticipants();
-  }
+    
+    feedbackOverlay.classList.remove('hidden');
 }
 
-async function deleteParticipant(entryId) {
-  const removeLocally = () => {
-    quizState.participants = quizState.participants.filter((participant) => participant.entryId !== entryId);
-    saveParticipants();
-    renderAdmin();
-    renderLeaderboard();
-  };
-
-  try {
-    const apiRoot = getApiRoot();
-    const response = await fetch(`${apiRoot}/api/participants/${entryId}`, { method: 'DELETE' });
-    if (!response.ok) {
-      throw new Error('Delete failed');
+// Next Question
+btnNextQuestion.addEventListener('click', () => {
+    feedbackOverlay.classList.add('hidden');
+    
+    currentQuestionIndex++;
+    
+    if (currentQuestionIndex < questions.length) {
+        loadQuestion();
+    } else {
+        endQuiz();
     }
-    const updated = await response.json();
-    quizState.participants = normalizeParticipants(updated);
-    if (!apiRoot) {
-      saveParticipants();
+});
+
+/* ==========================================================================
+   Results & Data Storage (FIREBASE)
+   ========================================================================== */
+async function endQuiz() {
+    // Fill the progress bar completely
+    progressFill.style.width = '100%';
+    
+    // Calculate max possible score (15 * 10 = 150)
+    const maxScore = questions.length * 10;
+    const percentage = (currentUser.score / maxScore) * 100;
+    
+    // UI Updates
+    finalScoreEl.innerText = currentUser.score;
+    
+    // Performance logic
+    performanceBadge.className = 'performance-badge';
+    if (percentage >= 80) {
+        performanceBadge.innerText = 'Harmony Leader';
+        performanceBadge.classList.add('badge-high');
+        resultMessage.innerText = "Exceptional understanding of Universal Human Values! You are a beacon of harmony.";
+        resultIcon.innerText = '🏆';
+    } else if (percentage >= 50) {
+        performanceBadge.innerText = 'Learning Mind';
+        performanceBadge.classList.add('badge-medium');
+        resultMessage.innerText = "Good effort! You grasp the concepts well, but there is still room to deepen your understanding.";
+        resultIcon.innerText = '🌿';
+    } else {
+        performanceBadge.innerText = 'Needs Reflection';
+        performanceBadge.classList.add('badge-low');
+        resultMessage.innerText = "Take some time to reflect on relationships, society, and nature. Harmony is a journey.";
+        resultIcon.innerText = '🌱';
     }
-    renderAdmin();
-    renderLeaderboard();
-  } catch (error) {
-    removeLocally();
-  }
+    
+    showScreen('result');
+
+    // Attempt to save to Firebase
+    try {
+        if(firebaseConfig.apiKey !== "YOUR_API_KEY") {
+            await db.collection("leaderboard").add({
+                name: currentUser.name,
+                usn: currentUser.usn,
+                section: currentUser.section,
+                score: currentUser.score,
+                timeTaken: Number(currentUser.timeTaken.toFixed(1)),
+                timestamp: new Date().toISOString()
+            });
+            console.log("Score saved to Firebase!");
+        } else {
+            console.warn("Firebase not configured. Setup your API keys to save data.");
+        }
+    } catch (e) {
+        console.error("Error adding document to Firebase: ", e);
+    }
 }
 
-function renderReview() {
-  elements.reviewList.innerHTML = '';
-  const wrongCount = quizState.userAnswers.filter((answer) => !answer.correct).length;
-  const correctCount = quizState.userAnswers.length - wrongCount;
-  elements.reviewSummary.textContent = wrongCount > 0
-    ? `You answered ${correctCount} correctly and made ${wrongCount} mistake${wrongCount === 1 ? '' : 's'}. Review each question below.`
-    : 'Perfect score! All answers were correct.';
-
-  quizState.userAnswers.forEach((answer, index) => {
-    const question = questions[index];
-    const row = document.createElement('div');
-    row.className = `review-row ${answer.correct ? 'correct' : 'wrong'}`;
-    row.innerHTML = `
-      <div class="review-question"><strong>Q${index + 1}:</strong> ${question.text}</div>
-      <div class="review-answer"><span>Your answer:</span> ${answer.selectedText}</div>
-      <div class="review-answer"><span>Correct answer:</span> ${answer.correctText}</div>
-      <div class="review-status">${answer.correct ? '✅ Correct' : '❌ Mistake'}</div>
-    `;
-    elements.reviewList.appendChild(row);
-  });
-}
-
-function renderLeaderboard() {
-  elements.leaderboardList.innerHTML = '';
-  if (quizState.participants.length === 0) {
-    const empty = document.createElement('div');
-    empty.className = 'leaderboard-empty';
-    empty.textContent = 'No leaderboard entries yet. Complete a quiz to submit your score.';
-    elements.leaderboardList.appendChild(empty);
-    return;
-  }
-
-  quizState.participants.slice(0, 8).forEach((participant, index) => {
-    const row = document.createElement('div');
-    row.className = 'leaderboard-row';
-    row.innerHTML = `<span>${index + 1}</span>
-                     <span>${participant.name}</span>
-                     <span>${participant.score}</span>
-                     <span>${participant.time}s</span>`;
-    elements.leaderboardList.appendChild(row);
-  });
-}
-
-function renderAdmin() {
-  elements.participantsList.innerHTML = '';
-  elements.totalParticipants.textContent = quizState.participants.length;
-  elements.winnerMessage.textContent = 'Press the button to reveal the top player.';
-  elements.winnerMessage.classList.remove('winner-success', 'winner-empty');
-
-  if (quizState.participants.length > 0) {
-    const top = quizState.participants[0];
-    elements.topScorer.textContent = `${top.name} — ${top.score} pts`;
-  } else {
-    elements.topScorer.textContent = 'No data yet';
-  }
-
-  quizState.participants.forEach((participant) => {
-    const row = document.createElement('div');
-    row.className = 'table-row';
-    row.innerHTML = `<span>${participant.name}</span>
-                     <span>${participant.id}</span>
-                     <span>${participant.section}</span>
-                     <span>${participant.score}</span>
-                     <span>${participant.time}s</span>
-                     <button type="button" class="secondary-btn delete-btn" aria-label="Delete participant ${participant.name}">Delete</button>`;
-    row.querySelector('.delete-btn').addEventListener('click', () => deleteParticipant(participant.entryId));
-    elements.participantsList.appendChild(row);
-  });
-}
-
-function announceWinner() {
-  if (quizState.participants.length === 0) {
-    elements.winnerMessage.textContent = 'No participants yet — start a quiz session first.';
-    elements.winnerMessage.classList.add('winner-empty');
-    return;
-  }
-
-  const winner = quizState.participants[0];
-  const winnerText = `🎉 Surprise winner announcement: ${winner.name} from ${winner.section}! Score ${winner.score} points in ${winner.time}s.`;
-  elements.winnerMessage.textContent = winnerText;
-  elements.winnerMessage.classList.add('winner-success');
-}
-
-function resetQuiz() {
-  quizState.currentQuestion = 0;
-  quizState.score = 0;
-  quizState.totalTime = 0;
-  quizState.answerLocked = false;
-  elements.feedbackPanel.classList.add('hidden');
-  elements.scoreValue.textContent = '0';
-  updateProgress();
-  renderQuestion();
-  startTimer();
-  showView(elements.quizPage);
-}
-
-function nextQuestion() {
-  elements.feedbackPanel.classList.add('hidden');
-  quizState.currentQuestion += 1;
-  quizState.answerLocked = false;
-
-  if (quizState.currentQuestion >= questions.length) {
-    finishQuiz();
-    return;
-  }
-
-  updateProgress();
-  renderQuestion();
-  startTimer();
-}
-
-async function openAdmin() {
-  elements.adminPage.classList.remove('hidden');
-  try {
-    await loadParticipants();
-  } catch (error) {
-    console.warn('Could not load participants for admin panel:', error);
-  }
-  renderAdmin();
-  showView(elements.adminPage);
-}
-
-elements.userForm.addEventListener('submit', (event) => {
-  event.preventDefault();
-  quizState.player.name = elements.playerName.value.trim();
-  quizState.player.id = elements.playerId.value.trim();
-  quizState.player.section = elements.playerSection.value.trim();
-
-  if (!quizState.player.name || !quizState.player.id || !quizState.player.section) {
-    alert('Please fill in all fields to start the quiz.');
-    return;
-  }
-
-  resetQuiz();
+/* ==========================================================================
+   Admin & Leaderboard Features (FIREBASE)
+   ========================================================================== */
+btnShowAdmin.addEventListener('click', () => {
+    loadAdminData();
+    showScreen('admin');
 });
 
-elements.nextButton.addEventListener('click', nextQuestion);
-elements.restartButton.addEventListener('click', () => {
-  elements.playerName.value = '';
-  elements.playerId.value = '';
-  elements.playerSection.value = '';
-  showView(elements.landingPage);
+btnCloseAdmin.addEventListener('click', () => {
+    showScreen('welcome');
 });
-elements.leaderboardButton.addEventListener('click', async () => {
-  await loadParticipants();
-  renderLeaderboard();
-  showView(elements.leaderboardPage);
-});
-elements.closeLeaderboard.addEventListener('click', () => {
-  showView(elements.resultPage);
-});
-function promptAdminAccess() {
-  const entered = prompt('Enter admin password to access the admin panel:');
-  if (!entered) {
-    return;
-  }
 
-  if (entered.trim().toLowerCase() === ADMIN_PASSWORD.toLowerCase()) {
-    openAdmin().catch((error) => {
-      console.error('Admin panel failed to open:', error);
-      alert('Unable to open the admin panel. Please try again.');
-    });
-  } else {
-    alert('Incorrect password. Admin access denied.');
-  }
+btnViewLeaderboard.addEventListener('click', () => {
+    loadAdminData();
+    showScreen('admin');
+});
+
+btnRestart.addEventListener('click', () => {
+    // Reset form
+    regForm.reset();
+    showScreen('welcome');
+});
+
+async function loadAdminData() {
+    // Show loading state
+    totalParticipantsEl.innerText = '...';
+    highestScoreEl.innerText = '...';
+    leaderboardBody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Loading...</td></tr>';
+    
+    if(firebaseConfig.apiKey === "YOUR_API_KEY") {
+        leaderboardBody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:red;">Firebase is not configured! Please add your API keys in script.js</td></tr>';
+        return;
+    }
+
+    try {
+        const querySnapshot = await db.collection("leaderboard")
+            .orderBy("score", "desc")
+            .orderBy("timeTaken", "asc")
+            .get();
+        const leaderboard = [];
+        querySnapshot.forEach((doc) => {
+            leaderboard.push({ id: doc.id, ...doc.data() });
+        });
+        
+        // Stats
+        totalParticipantsEl.innerText = leaderboard.length;
+        
+        if (leaderboard.length > 0) {
+            highestScoreEl.innerText = leaderboard[0].score;
+        } else {
+            highestScoreEl.innerText = '0';
+        }
+        
+        // Populate Table
+        leaderboardBody.innerHTML = '';
+        
+        if(leaderboard.length === 0) {
+            leaderboardBody.innerHTML = '<tr><td colspan="4" style="text-align:center;">No participants yet.</td></tr>';
+        }
+
+        leaderboard.forEach((entry, index) => {
+            const tr = document.createElement('tr');
+            
+            // Rank styling
+            let rankHtml = `${index + 1}`;
+            if (index === 0) rankHtml = `<span class="rank-badge rank-1">1</span>`;
+            else if (index === 1) rankHtml = `<span class="rank-badge rank-2">2</span>`;
+            else if (index === 2) rankHtml = `<span class="rank-badge rank-3">3</span>`;
+            
+            tr.innerHTML = `
+                <td>${rankHtml}</td>
+                <td><strong>${entry.name}</strong><br><small style="color:#6b7280">${entry.section}</small></td>
+                <td>${entry.usn}</td>
+                <td><strong style="color:var(--primary-color)">${entry.score}</strong></td>
+            `;
+            
+            leaderboardBody.appendChild(tr);
+        });
+    } catch (e) {
+        console.error("Error loading admin data: ", e);
+        leaderboardBody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:red;">Error loading data. Check console.</td></tr>';
+    }
 }
 
-elements.adminButton.addEventListener('click', promptAdminAccess);
-elements.announceWinner.addEventListener('click', announceWinner);
-elements.closeAdmin.addEventListener('click', () => {
-  elements.adminPage.classList.add('hidden');
-  showView(elements.landingPage);
-});
-
-loadParticipants().finally(() => {
-  showView(elements.landingPage);
-  updateProgress();
-  renderQuestion();
+btnClearData.addEventListener('click', async () => {
+    if (confirm("Are you sure you want to delete all participant data? This cannot be undone.")) {
+        try {
+            const querySnapshot = await db.collection("leaderboard").get();
+            const deletePromises = [];
+            
+            querySnapshot.forEach((docSnap) => {
+                deletePromises.push(db.collection("leaderboard").doc(docSnap.id).delete());
+            });
+            
+            await Promise.all(deletePromises);
+            console.log("All data cleared.");
+            loadAdminData(); // refresh table
+        } catch (e) {
+            console.error("Error clearing data: ", e);
+            alert("Error clearing data. Make sure Firebase rules allow deletions.");
+        }
+    }
 });
