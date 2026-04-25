@@ -227,6 +227,14 @@ window.onload = () => {
     listenForWinner();
 };
 
+// Warn the user if they try to refresh or leave during an active quiz
+window.addEventListener('beforeunload', (e) => {
+    if (screens.quiz.classList.contains('active')) {
+        e.preventDefault();
+        e.returnValue = ''; // Required to trigger the browser's confirmation dialog
+    }
+});
+
 function showScreen(screenName) {
     Object.values(screens).forEach(screen => {
         screen.classList.remove('active');
